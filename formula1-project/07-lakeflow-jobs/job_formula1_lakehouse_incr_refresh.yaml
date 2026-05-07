@@ -21,7 +21,6 @@ resources:
         quartz_cron_expression: 45 0 22 * * ?
         timezone_id: Asia/Calcutta
         pause_status: PAUSED
-      max_concurrent_runs: 6
       tasks:
         - task_key: 01_ingest_circuits_file
           notebook_task:
@@ -62,8 +61,8 @@ resources:
           job_cluster_key: std_f4_job_cluster
         - task_key: 03_ingest_constructors_file
           notebook_task:
-            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/02-bronze/03.IngestConstructors
-              File
+            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/02-bronze/03.Ingest
+              Constructors File
             source: WORKSPACE
           job_cluster_key: std_f4_job_cluster
         - task_key: 03_transform_constructors_data
@@ -105,7 +104,7 @@ resources:
         - task_key: 06_ingests_sprints_file
           notebook_task:
             notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/02-bronze/06.Ingest
-              Sprints FIle
+              Sprints File
             source: WORKSPACE
           job_cluster_key: std_f4_job_cluster
         - task_key: 06_transform_sprints_data
@@ -125,16 +124,9 @@ resources:
               Results Fact
             source: WORKSPACE
           job_cluster_key: std_f4_job_cluster
-        - task_key: 91_ref_nationality_region
-          notebook_task:
-            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/04-gold/91.Build
-              Nationality Region Reference
-            source: WORKSPACE
-          job_cluster_key: std_f4_job_cluster
         - task_key: 02_Build_Constructor_Dimension
           depends_on:
             - task_key: 03_transform_constructors_data
-            - task_key: 91_ref_nationality_region
           notebook_task:
             notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/04-gold/02.
               Build Constructors Dimension
@@ -142,7 +134,6 @@ resources:
           job_cluster_key: std_f4_job_cluster
         - task_key: 03_Build_Drivers_Dimension
           depends_on:
-            - task_key: 91_ref_nationality_region
             - task_key: 04_transform_drivers_data
           notebook_task:
             notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/04-gold/03.Build
