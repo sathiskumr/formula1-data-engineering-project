@@ -1,0 +1,178 @@
+resources:
+  jobs:
+    job_formula1_lakehouse_incr_refresh:
+      name: job_formula1_lakehouse_incr_refresh
+      email_notifications:
+        on_start:
+          - skr03@outlook.com
+        on_success:
+          - skr03@outlook.com
+        on_failure:
+          - skr03@outlook.com
+        on_duration_warning_threshold_exceeded:
+          - skr03@outlook.com
+      timeout_seconds: 1500
+      health:
+        rules:
+          - metric: RUN_DURATION_SECONDS
+            op: GREATER_THAN
+            value: 1200
+      schedule:
+        quartz_cron_expression: 45 0 22 * * ?
+        timezone_id: Asia/Calcutta
+        pause_status: PAUSED
+      max_concurrent_runs: 6
+      tasks:
+        - task_key: 01_ingest_circuits_file
+          notebook_task:
+            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/02-bronze/01.Ingest
+              Circuits File
+            source: WORKSPACE
+          job_cluster_key: std_f4_job_cluster
+        - task_key: 01_transform_circuits_data
+          depends_on:
+            - task_key: 01_ingest_circuits_file
+          notebook_task:
+            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/03-silver/01.Transform
+              Circuits Data
+            source: WORKSPACE
+          job_cluster_key: std_f4_job_cluster
+        - task_key: 02_ingest_races_file
+          notebook_task:
+            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/02-bronze/02.Ingest
+              Races File
+            source: WORKSPACE
+          job_cluster_key: std_f4_job_cluster
+        - task_key: 02_transform_races_data
+          depends_on:
+            - task_key: 02_ingest_races_file
+          notebook_task:
+            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/03-silver/02.Transform
+              Races Data
+            source: WORKSPACE
+          job_cluster_key: std_f4_job_cluster
+        - task_key: 01_Build_Races_Dimension
+          depends_on:
+            - task_key: 01_transform_circuits_data
+            - task_key: 02_transform_races_data
+          notebook_task:
+            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/04-gold/01.Build
+              Races Dimension
+            source: WORKSPACE
+          job_cluster_key: std_f4_job_cluster
+        - task_key: 03_ingest_constructors_file
+          notebook_task:
+            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/02-bronze/03.IngestConstructors
+              File
+            source: WORKSPACE
+          job_cluster_key: std_f4_job_cluster
+        - task_key: 03_transform_constructors_data
+          depends_on:
+            - task_key: 03_ingest_constructors_file
+          notebook_task:
+            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/03-silver/03.Transform
+              Constructors Data
+            source: WORKSPACE
+          job_cluster_key: std_f4_job_cluster
+        - task_key: 04_ingest_drivers_file
+          notebook_task:
+            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/02-bronze/04.Ingest
+              Drivers File
+            source: WORKSPACE
+          job_cluster_key: std_f4_job_cluster
+        - task_key: 04_transform_drivers_data
+          depends_on:
+            - task_key: 04_ingest_drivers_file
+          notebook_task:
+            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/03-silver/04.Transform
+              Drivers Data
+            source: WORKSPACE
+          job_cluster_key: std_f4_job_cluster
+        - task_key: 05_ingest_results_file
+          notebook_task:
+            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/02-bronze/05.Ingest
+              Results File
+            source: WORKSPACE
+          job_cluster_key: std_f4_job_cluster
+        - task_key: 05_transform_results_data
+          depends_on:
+            - task_key: 05_ingest_results_file
+          notebook_task:
+            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/03-silver/05.Transform
+              Results Data
+            source: WORKSPACE
+          job_cluster_key: std_f4_job_cluster
+        - task_key: 06_ingests_sprints_file
+          notebook_task:
+            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/02-bronze/06.Ingest
+              Sprints FIle
+            source: WORKSPACE
+          job_cluster_key: std_f4_job_cluster
+        - task_key: 06_transform_sprints_data
+          depends_on:
+            - task_key: 06_ingests_sprints_file
+          notebook_task:
+            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/03-silver/06.Transform
+              Sprints Data
+            source: WORKSPACE
+          job_cluster_key: std_f4_job_cluster
+        - task_key: 04_Build_Results_Fact
+          depends_on:
+            - task_key: 05_transform_results_data
+            - task_key: 06_transform_sprints_data
+          notebook_task:
+            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/04-gold/04.Build
+              Results Fact
+            source: WORKSPACE
+          job_cluster_key: std_f4_job_cluster
+        - task_key: 91_ref_nationality_region
+          notebook_task:
+            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/04-gold/91.Build
+              Nationality Region Reference
+            source: WORKSPACE
+          job_cluster_key: std_f4_job_cluster
+        - task_key: 02_Build_Constructor_Dimension
+          depends_on:
+            - task_key: 03_transform_constructors_data
+            - task_key: 91_ref_nationality_region
+          notebook_task:
+            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/04-gold/02.
+              Build Constructors Dimension
+            source: WORKSPACE
+          job_cluster_key: std_f4_job_cluster
+        - task_key: 03_Build_Drivers_Dimension
+          depends_on:
+            - task_key: 91_ref_nationality_region
+            - task_key: 04_transform_drivers_data
+          notebook_task:
+            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/04-gold/03.Build
+              Drivers Dimension
+            source: WORKSPACE
+          job_cluster_key: std_f4_job_cluster
+      job_clusters:
+        - job_cluster_key: std_f4_job_cluster
+          new_cluster:
+            cluster_name: ""
+            spark_version: 17.3.x-scala2.13
+            spark_conf:
+              spark.master: local[*, 4]
+              spark.databricks.cluster.profile: singleNode
+            azure_attributes:
+              first_on_demand: 1
+              availability: SPOT_WITH_FALLBACK_AZURE
+              spot_bid_max_price: -1
+            node_type_id: Standard_F4
+            driver_node_type_id: Standard_F4
+            custom_tags:
+              ResourceClass: SingleNode
+            spark_env_vars:
+              PYSPARK_PYTHON: /databricks/python3/bin/python3
+            enable_elastic_disk: true
+            data_security_mode: SINGLE_USER
+            runtime_engine: STANDARD
+            num_workers: 0
+      queue:
+        enabled: true
+      parameters:
+        - name: p_batch_id
+          default: ""
