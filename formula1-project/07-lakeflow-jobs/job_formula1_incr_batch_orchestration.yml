@@ -1,7 +1,7 @@
 resources:
   jobs:
-    job_formula1_lakehouse_incr_refresh:
-      name: job_formula1_lakehouse_incr_refresh
+    job_formula1_incr_batch_orchestration:
+      name: job_formula1_incr_batch_orchestration
       email_notifications:
         on_start:
           - skr03@outlook.com
@@ -17,39 +17,71 @@ resources:
           - metric: RUN_DURATION_SECONDS
             op: GREATER_THAN
             value: 1200
-      schedule:
-        quartz_cron_expression: 45 0 22 * * ?
-        timezone_id: Asia/Calcutta
-        pause_status: PAUSED
       tasks:
+        - task_key: 01_Identify_Next_Batch
+          notebook_task:
+            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/06-orchestration/01.Identify
+              Next Batch
+            source: WORKSPACE
+          job_cluster_key: batch_orchestration
+        - task_key: is_There_A_Batch_To_Process
+          depends_on:
+            - task_key: 01_Identify_Next_Batch
+          condition_task:
+            op: EQUAL_TO
+            left: "{{tasks.01_Identify_Next_Batch.values.has_batch}}"
+            right: "true"
+        - task_key: 02_Create_New_Batch
+          depends_on:
+            - task_key: is_There_A_Batch_To_Process
+              outcome: "true"
+          notebook_task:
+            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/06-orchestration/02.Create
+              New Batch
+            base_parameters:
+              p_batch_id: "{{tasks.01_Identify_Next_Batch.values.p_batch_id}}"
+            source: WORKSPACE
+          job_cluster_key: batch_orchestration
         - task_key: 01_ingest_circuits_file
+          depends_on:
+            - task_key: 02_Create_New_Batch
           notebook_task:
             notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/02-bronze/01.Ingest
               Circuits File
+            base_parameters:
+              p_batch_id: "{{tasks.01_Identify_Next_Batch.values.p_batch_id}}"
             source: WORKSPACE
-          job_cluster_key: std_f4_job_cluster
+          job_cluster_key: batch_orchestration
         - task_key: 01_transform_circuits_data
           depends_on:
             - task_key: 01_ingest_circuits_file
           notebook_task:
             notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/03-silver/01.Transform
               Circuits Data
+            base_parameters:
+              p_batch_id: "{{tasks.01_Identify_Next_Batch.values.p_batch_id}}"
             source: WORKSPACE
-          job_cluster_key: std_f4_job_cluster
+          job_cluster_key: batch_orchestration
         - task_key: 02_ingest_races_file
+          depends_on:
+            - task_key: 02_Create_New_Batch
           notebook_task:
             notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/02-bronze/02.Ingest
               Races File
+            base_parameters:
+              p_batch_id: "{{tasks.01_Identify_Next_Batch.values.p_batch_id}}"
             source: WORKSPACE
-          job_cluster_key: std_f4_job_cluster
+          job_cluster_key: batch_orchestration
         - task_key: 02_transform_races_data
           depends_on:
             - task_key: 02_ingest_races_file
           notebook_task:
             notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/03-silver/02.Transform
               Races Data
+            base_parameters:
+              p_batch_id: "{{tasks.01_Identify_Next_Batch.values.p_batch_id}}"
             source: WORKSPACE
-          job_cluster_key: std_f4_job_cluster
+          job_cluster_key: batch_orchestration
         - task_key: 01_Build_Races_Dimension
           depends_on:
             - task_key: 01_transform_circuits_data
@@ -57,64 +89,110 @@ resources:
           notebook_task:
             notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/04-gold/01.Build
               Races Dimension
+            base_parameters:
+              p_batch_id: "{{tasks.01_Identify_Next_Batch.values.p_batch_id}}"
             source: WORKSPACE
-          job_cluster_key: std_f4_job_cluster
+          job_cluster_key: batch_orchestration
         - task_key: 03_ingest_constructors_file
+          depends_on:
+            - task_key: 02_Create_New_Batch
           notebook_task:
             notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/02-bronze/03.Ingest
               Constructors File
+            base_parameters:
+              p_batch_id: "{{tasks.01_Identify_Next_Batch.values.p_batch_id}}"
             source: WORKSPACE
-          job_cluster_key: std_f4_job_cluster
+          job_cluster_key: batch_orchestration
         - task_key: 03_transform_constructors_data
           depends_on:
             - task_key: 03_ingest_constructors_file
           notebook_task:
             notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/03-silver/03.Transform
               Constructors Data
+            base_parameters:
+              p_batch_id: "{{tasks.01_Identify_Next_Batch.values.p_batch_id}}"
             source: WORKSPACE
-          job_cluster_key: std_f4_job_cluster
+          job_cluster_key: batch_orchestration
+        - task_key: 02_Build_Constructor_Dimension
+          depends_on:
+            - task_key: 03_transform_constructors_data
+          notebook_task:
+            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/04-gold/02.
+              Build Constructors Dimension
+            base_parameters:
+              p_batch_id: "{{tasks.01_Identify_Next_Batch.values.p_batch_id}}"
+            source: WORKSPACE
+          job_cluster_key: batch_orchestration
         - task_key: 04_ingest_drivers_file
+          depends_on:
+            - task_key: 02_Create_New_Batch
           notebook_task:
             notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/02-bronze/04.Ingest
               Drivers File
+            base_parameters:
+              p_batch_id: "{{tasks.01_Identify_Next_Batch.values.p_batch_id}}"
             source: WORKSPACE
-          job_cluster_key: std_f4_job_cluster
+          job_cluster_key: batch_orchestration
         - task_key: 04_transform_drivers_data
           depends_on:
             - task_key: 04_ingest_drivers_file
           notebook_task:
             notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/03-silver/04.Transform
               Drivers Data
+            base_parameters:
+              p_batch_id: "{{tasks.01_Identify_Next_Batch.values.p_batch_id}}"
             source: WORKSPACE
-          job_cluster_key: std_f4_job_cluster
+          job_cluster_key: batch_orchestration
+        - task_key: 03_Build_Drivers_Dimension
+          depends_on:
+            - task_key: 04_transform_drivers_data
+          notebook_task:
+            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/04-gold/03.Build
+              Drivers Dimension
+            base_parameters:
+              p_batch_id: "{{tasks.01_Identify_Next_Batch.values.p_batch_id}}"
+            source: WORKSPACE
+          job_cluster_key: batch_orchestration
         - task_key: 05_ingest_results_file
+          depends_on:
+            - task_key: 02_Create_New_Batch
           notebook_task:
             notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/02-bronze/05.Ingest
               Results File
+            base_parameters:
+              p_batch_id: "{{tasks.01_Identify_Next_Batch.values.p_batch_id}}"
             source: WORKSPACE
-          job_cluster_key: std_f4_job_cluster
+          job_cluster_key: batch_orchestration
         - task_key: 05_transform_results_data
           depends_on:
             - task_key: 05_ingest_results_file
           notebook_task:
             notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/03-silver/05.Transform
               Results Data
+            base_parameters:
+              p_batch_id: "{{tasks.01_Identify_Next_Batch.values.p_batch_id}}"
             source: WORKSPACE
-          job_cluster_key: std_f4_job_cluster
+          job_cluster_key: batch_orchestration
         - task_key: 06_ingests_sprints_file
+          depends_on:
+            - task_key: 02_Create_New_Batch
           notebook_task:
             notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/02-bronze/06.Ingest
               Sprints File
+            base_parameters:
+              p_batch_id: "{{tasks.01_Identify_Next_Batch.values.p_batch_id}}"
             source: WORKSPACE
-          job_cluster_key: std_f4_job_cluster
+          job_cluster_key: batch_orchestration
         - task_key: 06_transform_sprints_data
           depends_on:
             - task_key: 06_ingests_sprints_file
           notebook_task:
             notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/03-silver/06.Transform
               Sprints Data
+            base_parameters:
+              p_batch_id: "{{tasks.01_Identify_Next_Batch.values.p_batch_id}}"
             source: WORKSPACE
-          job_cluster_key: std_f4_job_cluster
+          job_cluster_key: batch_orchestration
         - task_key: 04_Build_Results_Fact
           depends_on:
             - task_key: 05_transform_results_data
@@ -122,26 +200,25 @@ resources:
           notebook_task:
             notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/04-gold/04.Build
               Results Fact
+            base_parameters:
+              p_batch_id: "{{tasks.01_Identify_Next_Batch.values.p_batch_id}}"
             source: WORKSPACE
-          job_cluster_key: std_f4_job_cluster
-        - task_key: 02_Build_Constructor_Dimension
+          job_cluster_key: batch_orchestration
+        - task_key: 03_Complete_Batch
           depends_on:
-            - task_key: 03_transform_constructors_data
+            - task_key: 01_Build_Races_Dimension
+            - task_key: 02_Build_Constructor_Dimension
+            - task_key: 03_Build_Drivers_Dimension
+            - task_key: 04_Build_Results_Fact
           notebook_task:
-            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/04-gold/02.
-              Build Constructors Dimension
+            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/06-orchestration/03.Complete
+              Batch
+            base_parameters:
+              p_batch_id: "{{tasks.01_Identify_Next_Batch.values.p_batch_id}}"
             source: WORKSPACE
-          job_cluster_key: std_f4_job_cluster
-        - task_key: 03_Build_Drivers_Dimension
-          depends_on:
-            - task_key: 04_transform_drivers_data
-          notebook_task:
-            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/04-gold/03.Build
-              Drivers Dimension
-            source: WORKSPACE
-          job_cluster_key: std_f4_job_cluster
+          job_cluster_key: batch_orchestration
       job_clusters:
-        - job_cluster_key: std_f4_job_cluster
+        - job_cluster_key: batch_orchestration
           new_cluster:
             cluster_name: ""
             spark_version: 17.3.x-scala2.13
@@ -164,6 +241,3 @@ resources:
             num_workers: 0
       queue:
         enabled: true
-      parameters:
-        - name: p_batch_id
-          default: ""
