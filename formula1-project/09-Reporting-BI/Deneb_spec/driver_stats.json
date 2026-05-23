@@ -1,0 +1,323 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "data": { "name": "dataset" },
+  "transform": [
+    {
+      "calculate": "datum.wins * 1000000 + datum.podiums * 10000 + datum.finish_in_points * 100 + datum.pole_positions",
+      "as": "sort_key"
+    },
+    {
+      "fold": ["wins","podiums","finish_in_points","pole_positions","dnf/dns/dsq"],
+      "as": ["metric_key","value"]
+    },
+    {
+      "calculate": "datum.metric_key === 'wins' ? 'Wins' : datum.metric_key === 'podiums' ? 'Podiums' : datum.metric_key === 'finish_in_points' ? 'Pts finishes' : datum.metric_key === 'pole_positions' ? 'Poles' : 'DNF/DNS/DSQ'",
+      "as": "metric"
+    },
+    {
+      "calculate": "datum.metric_key === 'wins' ? 1 : datum.metric_key === 'podiums' ? 2 : datum.metric_key === 'finish_in_points' ? 3 : datum.metric_key === 'pole_positions' ? 4 : 5",
+      "as": "metric_sort"
+    },
+    { "calculate": "abs(datum.value)", "as": "abs_value" },
+    {
+      "calculate": "datum.metric + '  :  ' + toString(datum.abs_value)",
+      "as": "tooltip_metric_value"
+    },
+    {
+      "calculate": "datum.color_code === '#FFFFFF' || datum.color_code === '#ffffff' ? '#888780' : datum.color_code",
+      "as": "driver_safe_color"
+    }
+  ],
+  "layer": [
+    {
+      "transform": [{ "filter": "datum.value !== 0" }],
+      "mark": { "type": "rule", "strokeWidth": 3 },
+      "encoding": {
+        "x": {
+          "field": "driver_code",
+          "type": "ordinal",
+          "sort": { "field": "sort_key", "op": "max", "order": "descending" },
+          "axis": {
+            "title": null,
+            "labels": false,
+            "ticks": false,
+            "domain": false
+          }
+        },
+        "xOffset": {
+          "field": "metric",
+          "type": "nominal",
+          "sort": ["Wins","Podiums","Pts finishes","Poles","DNF/DNS/DSQ"]
+        },
+        "y": {
+          "field": "value",
+          "type": "quantitative",
+          "axis": {
+            "title": null,
+            "gridColor": "rgba(136,135,128,0.2)",
+            "labelColor": "#888780",
+            "labelFont": "Segoe UI",
+            "labelFontWeight": "600",
+            "labelFontSize": 10
+          }
+        },
+        "y2": { "datum": 0 },
+        "color": {
+          "field": "metric",
+          "type": "nominal",
+          "sort": ["Wins","Podiums","Pts finishes","Poles","DNF/DNS/DSQ"],
+          "scale": {
+            "domain": ["Wins","Podiums","Pts finishes","Poles","DNF/DNS/DSQ"],
+            "range": ["#FBBF24", "#60A5FA", "#34D399", "#C084FC", "#FB923C"]
+          },
+          "legend": {
+            "orient": "top-right",
+            "direction": "horizontal",
+            "title": null,
+            "labelFontSize": 10,
+            "labelFont": "Segoe UI",
+            "labelFontWeight": "600",
+            "labelColor": "#888780",
+            "symbolSize": 100
+          }
+        }
+      }
+    },
+    {
+      "transform": [{ "filter": "datum.value !== 0" }],
+      "params": [
+        {
+          "name": "hover",
+          "select": {
+            "type": "point",
+            "on": "mouseover",
+            "clear": "mouseout",
+            "fields": ["driver_code","metric"]
+          }
+        }
+      ],
+      "mark": {
+        "type": "point",
+        "filled": true,
+        "size": 160,
+        "opacity": 1,
+        "tooltip": null
+      },
+      "encoding": {
+        "x": {
+          "field": "driver_code",
+          "type": "ordinal",
+          "sort": { "field": "sort_key", "op": "max", "order": "descending" }
+        },
+        "xOffset": {
+          "field": "metric",
+          "type": "nominal",
+          "sort": ["Wins","Podiums","Pts finishes","Poles","DNF/DNS/DSQ"]
+        },
+        "y": { "field": "value", "type": "quantitative" },
+        "color": {
+          "field": "metric",
+          "type": "nominal",
+          "scale": {
+            "domain": ["Wins","Podiums","Pts finishes","Poles","DNF/DNS/DSQ"],
+            "range": ["#FBBF24", "#60A5FA", "#34D399", "#C084FC", "#FB923C"]
+          }
+        }
+      }
+    },
+    {
+      "transform": [{ "filter": "datum.value !== 0" }],
+      "mark": {
+        "type": "text",
+        "fontSize": 7,
+        "font": "Segoe UI",
+        "fontWeight": "bold",
+        "baseline": "middle",
+        "align": "center",
+        "color": "#000000"
+        
+      },
+      "encoding": {
+        "x": {
+          "field": "driver_code",
+          "type": "ordinal",
+          "sort": { "field": "sort_key", "op": "max", "order": "descending" }
+        },
+        "xOffset": {
+          "field": "metric",
+          "type": "nominal",
+          "sort": ["Wins","Podiums","Pts finishes","Poles","DNF/DNS/DSQ"]
+        },
+        "y": { "field": "value", "type": "quantitative" },
+        "text": { "field": "abs_value", "type": "quantitative", "format": "d" }
+      }
+    },
+    {
+      "mark": { "type": "rule", "color": "#444444", "strokeWidth": 0.5 },
+      "encoding": { "y": { "datum": 0 } }
+    },
+    {
+      "transform": [
+        {
+          "aggregate": [
+            { "op": "min", "field": "value", "as": "min_value" },
+            { "op": "max", "field": "sort_key", "as": "sort_key" },
+            { "op": "max", "field": "color_code", "as": "raw_color" }
+          ],
+          "groupby": ["driver_code"]
+        },
+        {
+          "calculate": "datum.raw_color === '#FFFFFF' || datum.raw_color === '#ffffff' ? '#888780' : datum.raw_color",
+          "as": "safe_color"
+        },
+        {
+          "window": [{ "op": "min", "field": "min_value", "as": "global_min" }],
+          "frame": [null, null]
+        },
+        { "calculate": "datum.global_min - 1.5", "as": "label_y" }
+      ],
+      "mark": {
+        "type": "text",
+        "baseline": "top",
+        "fontSize": 6,
+        "font": "Segoe UI",
+        "fontWeight": "bold",
+        "dy": 4
+      },
+      "encoding": {
+        "x": {
+          "field": "driver_code",
+          "type": "ordinal",
+          "sort": { "field": "sort_key", "op": "max", "order": "descending" }
+        },
+        "y": { "field": "label_y", "type": "quantitative" },
+        "text": { "field": "driver_code" },
+        "color": {
+          "field": "safe_color",
+          "type": "nominal",
+          "scale": null,
+          "legend": null
+        }
+      }
+    },
+    {
+      "transform": [
+        { "filter": { "param": "hover", "empty": false } },
+        { "filter": "datum.value !== 0" }
+      ],
+      "mark": {
+        "type": "rect",
+        "dx": 72,
+        "dy": 2,
+        "width": 140,
+        "height": 42,
+        "color": "#1a1f2e",
+        "opacity": 0.93,
+        "cornerRadius": 4,
+        "stroke": "#374151",
+        "strokeWidth": 0.5
+      },
+      "encoding": {
+        "x": {
+          "field": "driver_code",
+          "type": "ordinal",
+          "sort": { "field": "sort_key", "op": "max", "order": "descending" }
+        },
+        "xOffset": {
+          "field": "metric",
+          "type": "nominal",
+          "sort": ["Wins","Podiums","Pts finishes","Poles","DNF/DNS/DSQ"]
+        },
+        "y": { "field": "value", "type": "quantitative" }
+      }
+    },
+    {
+      "transform": [
+        { "filter": { "param": "hover", "empty": false } },
+        { "filter": "datum.value !== 0" }
+      ],
+      "mark": {
+        "type": "text",
+        "dx": -30,
+        "dy": -10,
+        "align": "left",
+        "font": "Segoe UI",
+        "fontWeight": "600",
+        "fontSize": 10
+      },
+      "encoding": {
+        "x": {
+          "field": "driver_code",
+          "type": "ordinal",
+          "sort": { "field": "sort_key", "op": "max", "order": "descending" }
+        },
+        "xOffset": {
+          "field": "metric",
+          "type": "nominal",
+          "sort": ["Wins","Podiums","Pts finishes","Poles","DNF/DNS/DSQ"]
+        },
+        "y": { "field": "value", "type": "quantitative" },
+        "text": { "field": "driver_name" },
+        "color": {
+          "field": "driver_safe_color",
+          "type": "nominal",
+          "scale": null,
+          "legend": null
+        }
+      }
+    },
+    {
+      "transform": [
+        { "filter": { "param": "hover", "empty": false } },
+        { "filter": "datum.value !== 0" }
+      ],
+      "mark": {
+        "type": "text",
+        "dx": -30,
+        "dy": 6,
+        "align": "left",
+        "font": "Segoe UI",
+        "fontWeight": "600",
+        "fontSize": 10
+      },
+      "encoding": {
+        "x": {
+          "field": "driver_code",
+          "type": "ordinal",
+          "sort": { "field": "sort_key", "op": "max", "order": "descending" }
+        },
+        "xOffset": {
+          "field": "metric",
+          "type": "nominal",
+          "sort": ["Wins","Podiums","Pts finishes","Poles","DNF/DNS/DSQ"]
+        },
+        "y": { "field": "value", "type": "quantitative" },
+        "text": { "field": "tooltip_metric_value" },
+        "color": {
+          "field": "metric",
+          "type": "nominal",
+          "scale": {
+            "domain": ["Wins","Podiums","Pts finishes","Poles","DNF/DNS/DSQ"],
+            "range": ["#FBBF24", "#60A5FA", "#34D399", "#C084FC", "#FB923C"]
+          },
+          "legend": null
+        }
+      }
+    }
+  ],
+  "title": {
+    "text": "Stats",
+    "anchor": "start",
+    "fontSize": 16,
+    "font": "Segoe UI",
+    "fontWeight": "bold",
+    "color": "#F9FAFB",
+    "offset": 20
+  },
+  "config": {
+    "view": { "stroke": null, "tooltipDelay": 0 },
+    "axis": { "domain": false },
+    "background": null,
+    "text": { "font": "Segoe UI" }
+  }
+}
