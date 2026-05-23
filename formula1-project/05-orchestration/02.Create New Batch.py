@@ -40,3 +40,4 @@ if v_batch_id:
     print(f"Marked batch {v_batch_id} as in_progress")
 else:
     raise Exception("batch_id is missing")  
+

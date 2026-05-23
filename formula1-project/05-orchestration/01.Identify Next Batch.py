@@ -52,3 +52,4 @@ if next_batch is None:
 else:
     dbutils.jobs.taskValues.set(key="p_batch_id", value=next_batch)
     dbutils.jobs.taskValues.set(key="has_batch", value="true")
+

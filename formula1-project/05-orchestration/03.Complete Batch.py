@@ -45,3 +45,4 @@ if v_batch_id:
     print(f"Marked batch {v_batch_id} as completed")
 else:
     raise Exception("batch_id is missing")  
+

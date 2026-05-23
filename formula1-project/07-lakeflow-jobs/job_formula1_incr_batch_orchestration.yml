@@ -17,10 +17,14 @@ resources:
           - metric: RUN_DURATION_SECONDS
             op: GREATER_THAN
             value: 1200
+      schedule:
+        quartz_cron_expression: 51 0 7 ? * Mon
+        timezone_id: Asia/Calcutta
+        pause_status: UNPAUSED
       tasks:
         - task_key: 01_Identify_Next_Batch
           notebook_task:
-            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/06-orchestration/01.Identify
+            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/05-orchestration/01.Identify
               Next Batch
             source: WORKSPACE
           job_cluster_key: batch_orchestration
@@ -36,7 +40,7 @@ resources:
             - task_key: is_There_A_Batch_To_Process
               outcome: "true"
           notebook_task:
-            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/06-orchestration/02.Create
+            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/05-orchestration/02.Create
               New Batch
             base_parameters:
               p_batch_id: "{{tasks.01_Identify_Next_Batch.values.p_batch_id}}"
@@ -211,7 +215,7 @@ resources:
             - task_key: 03_Build_Drivers_Dimension
             - task_key: 04_Build_Results_Fact
           notebook_task:
-            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/06-orchestration/03.Complete
+            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/05-orchestration/03.Complete
               Batch
             base_parameters:
               p_batch_id: "{{tasks.01_Identify_Next_Batch.values.p_batch_id}}"
