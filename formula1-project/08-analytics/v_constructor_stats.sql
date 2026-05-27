@@ -22,7 +22,7 @@ WITH base_results AS (
      FROM 
         formula1_incr.gold.fact_session_results
      WHERE 
-        season >= 2010 
+        season >= 2020 
         AND session_type IN ('RACE')
 ),
 
@@ -55,9 +55,9 @@ SELECT
     ) AS color_code
 
     , COALESCE(
-        cc.logo_32_white_png
-        , 'https://raw.githubusercontent.com/sathiskumr/formula1-data-engineering-project/main/ref_images/constructors-png/default.png'
-    ) AS cons_logo_png
+        cc.logo_svg
+        , 'https://raw.githubusercontent.com/sathiskumr/formula1-data-engineering-project/main/ref_images/constructors-svg/default.svg'
+    ) AS cons_logo
     , cs.wins
     , cs.podiums
     , cs.finish_in_points
@@ -66,6 +66,6 @@ SELECT
  FROM
     constructor_stats cs
     LEFT JOIN formula1_incr.gold.ref_constructor_color_code cc
-    ON CC.constructor_id = cs.constructor_id
+    ON cc.constructor_id = cs.constructor_id
     LEFT JOIN formula1_incr.gold.dim_constructors c
-    ON C.constructor_id = cs.constructor_id;
+    ON c.constructor_id = cs.constructor_id;

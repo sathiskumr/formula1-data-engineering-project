@@ -1,0 +1,303 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "data": { "name": "dataset" },
+  "title": {
+    "text": "Constructor Ranking Evolution",
+    "anchor": "start",
+    "fontSize": 16,
+    "font": "Segoe UI",
+    "fontWeight": "bold",
+    "color": "#F9FAFB",
+    "offset": 4
+  },
+  "autosize": {
+    "type": "fit",
+    "contains": "padding"
+  },
+  "transform": [
+    { "filter": "datum.rank_position <= 10" }
+  ],
+  "padding": {
+    "left": 10,
+    "right": 8,
+    "top": 10,
+    "bottom": 5
+  },
+  "layer": [
+    {
+      "mark": {
+        "type": "line",
+        "strokeWidth": 2,
+        "interpolate": "monotone",
+        "opacity": 0.9
+      },
+      "encoding": {
+        "x": {
+          "field": "round",
+          "type": "ordinal",
+          "axis": {
+            "title": "Round",
+            "labelAngle": 0,
+            "labelFontSize": 9,
+            "labelFont": "Segoe UI",
+            "labelFontWeight": "600",
+            "labelColor": "#9CA3AF",
+            "titleFontSize": 11,
+            "titleFont": "Segoe UI",
+            "titleFontWeight": "600",
+            "titleColor": "#9CA3AF",
+            "grid": false,
+            "tickColor": "#9CA3AF",
+            "domainColor": "#9CA3AF",
+            "domainWidth": 1,
+            "labelPadding": 6,
+            "tickSize": 4
+          }
+        },
+        "y": {
+          "field": "rank_position",
+          "type": "ordinal",
+          "sort": "ascending",
+          "axis": {
+            "title": "Championship Position",
+            "values": [1,2,3,4,5,6,7,8,9,10],
+            "labelFontSize": 9,
+            "labelFont": "Segoe UI",
+            "labelFontWeight": "600",
+            "labelColor": "#9CA3AF",
+            "titleFontSize": 11,
+            "titleFont": "Segoe UI",
+            "titleFontWeight": "600",
+            "titleColor": "#9CA3AF",
+            "gridColor": "rgba(136,135,128,0.12)",
+            "tickColor": "#9CA3AF",
+            "domainColor": "#9CA3AF",
+            "domainWidth": 1,
+            "labelPadding": 4,
+            "tickSize": 4
+          }
+        },
+        "color": {
+          "field": "color_code",
+          "type": "nominal",
+          "scale": null,
+          "legend": null
+        },
+        "detail": { "field": "constructor_id" }
+      }
+    },
+    {
+      "params": [
+        {
+          "name": "hover",
+          "select": {
+            "type": "point",
+            "on": "mouseover",
+            "clear": "mouseout",
+            "fields": ["constructor_id","round"]
+          }
+        }
+      ],
+      "mark": {
+        "type": "point",
+        "filled": true,
+        "size": 14,
+        "opacity": 0.8,
+        "tooltip": null
+      },
+      "encoding": {
+        "x": { "field": "round", "type": "ordinal" },
+        "y": {
+          "field": "rank_position",
+          "type": "ordinal",
+          "sort": "ascending"
+        },
+        "color": {
+          "field": "color_code",
+          "type": "nominal",
+          "scale": null,
+          "legend": null
+        },
+        "detail": { "field": "constructor_id" }
+      }
+    },
+    {
+      "transform": [
+        {
+          "joinaggregate": [
+            { "op": "max", "field": "round", "as": "max_round" }
+          ]
+        },
+        { "filter": "datum.round == datum.max_round" }
+      ],
+      "mark": {
+        "type": "text",
+        "align": "left",
+        "baseline": "middle",
+        "dx": 8,
+        "fontSize": 10,
+        "font": "Segoe UI",
+        "fontWeight": "bold"
+      },
+      "encoding": {
+        "x": { "field": "round", "type": "ordinal" },
+        "y": {
+          "field": "rank_position",
+          "type": "ordinal",
+          "sort": "ascending"
+        },
+        "text": { "field": "constructor_name" },
+        "color": {
+          "field": "color_code",
+          "type": "nominal",
+          "scale": null,
+          "legend": null
+        }
+      }
+    },
+    {
+      "transform": [
+        { "filter": { "param": "hover", "empty": false } }
+      ],
+      "mark": {
+        "type": "rect",
+        "dx": 90,
+        "dy": 4,
+        "width": 180,
+        "height": 72,
+        "color": "#1a1f2e",
+        "opacity": 0.93,
+        "cornerRadius": 8,
+        "stroke": "#374151",
+        "strokeWidth": 0.5
+      },
+      "encoding": {
+        "x": { "field": "round", "type": "ordinal" },
+        "y": {
+          "field": "rank_position",
+          "type": "ordinal",
+          "sort": "ascending"
+        }
+      }
+    },
+    {
+      "transform": [
+        { "filter": { "param": "hover", "empty": false } }
+      ],
+      "mark": {
+        "type": "text",
+        "dx": -50,
+        "dy": -25,
+        "align": "left",
+        "font": "Segoe UI",
+        "fontWeight": "700",
+        "fontSize": 10
+      },
+      "encoding": {
+        "x": { "field": "round", "type": "ordinal" },
+        "y": {
+          "field": "rank_position",
+          "type": "ordinal",
+          "sort": "ascending"
+        },
+        "text": { "field": "constructor_name" },
+        "color": {
+          "field": "color_code",
+          "type": "nominal",
+          "scale": null,
+          "legend": null
+        }
+      }
+    },
+    {
+      "transform": [
+        { "filter": { "param": "hover", "empty": false } }
+      ],
+      "mark": {
+        "type": "text",
+        "dx": -50,
+        "dy": -5,
+        "align": "left",
+        "font": "Segoe UI",
+        "fontWeight": "600",
+        "fontSize": 9,
+        "color": "#888780"
+      },
+      "encoding": {
+        "x": { "field": "round", "type": "ordinal" },
+        "y": {
+          "field": "rank_position",
+          "type": "ordinal",
+          "sort": "ascending"
+        },
+        "text": { "field": "circuit_name" }
+      }
+    },
+    {
+      "transform": [
+        { "filter": { "param": "hover", "empty": false } },
+        { "calculate": "'Round ' + datum.round", "as": "round_label" }
+      ],
+      "mark": {
+        "type": "text",
+        "dx": -50,
+        "dy": 15,
+        "align": "left",
+        "font": "Segoe UI",
+        "fontWeight": "600",
+        "fontSize": 9,
+        "color": "#888780"
+      },
+      "encoding": {
+        "x": { "field": "round", "type": "ordinal" },
+        "y": {
+          "field": "rank_position",
+          "type": "ordinal",
+          "sort": "ascending"
+        },
+        "text": { "field": "round_label" }
+      }
+    },
+    {
+      "transform": [
+        { "filter": { "param": "hover", "empty": false } },
+        {
+          "calculate": "'P' + datum.rank_position + '  •  ' + datum.cumulative_points + ' pts'",
+          "as": "pos_points"
+        }
+      ],
+      "mark": {
+        "type": "text",
+        "dx": -50,
+        "dy": 35,
+        "align": "left",
+        "font": "Segoe UI",
+        "fontWeight": "600",
+        "fontSize": 9,
+        "color": "#888780"
+      },
+      "encoding": {
+        "x": { "field": "round", "type": "ordinal" },
+        "y": {
+          "field": "rank_position",
+          "type": "ordinal",
+          "sort": "ascending"
+        },
+        "text": { "field": "pos_points" }
+      }
+    }
+  ],
+  "config": {
+    "view": {
+      "stroke": null,
+      "clip": false
+    },
+    "axis": {
+      "domain": true,
+      "domainColor": "#777777",
+      "domainWidth": 1
+    },
+    "background": "transparent",
+    "text": { "font": "Segoe UI" }
+  }
+}

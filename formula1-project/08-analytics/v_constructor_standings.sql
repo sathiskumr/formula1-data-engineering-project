@@ -7,23 +7,15 @@ WITH base_results AS (
         season
         , round
         , constructor_id
-        , driver_id
-        , grid_position
-        , completed_laps
-        , car_number
         , points
         , final_position
         , final_position_text
         , status
         , session_type
-        , is_win
-        , is_podium
-        , has_points
-        , is_pole
      FROM 
         formula1_incr.gold.fact_session_results
      WHERE 
-        season >= 2010 
+        season >= 2020 
         AND session_type IN ('RACE', 'SPRINT')
 ),
 
@@ -149,7 +141,7 @@ SELECT
     , COALESCE(
         cc.logo_svg
         , 'https://raw.githubusercontent.com/sathiskumr/formula1-data-engineering-project/main/ref_images/constructors-svg/default.svg'
-    ) AS cons_logo_svg
+    ) AS cons_logo
 
  FROM 
     constructor_points_summary css
