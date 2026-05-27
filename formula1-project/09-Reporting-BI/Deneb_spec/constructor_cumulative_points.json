@@ -1,0 +1,319 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "usermeta": {
+    "denebConfig": {
+      "interactivity": {
+        "tooltip": true,
+        "contextMenu": true,
+        "selection": true,
+        "dataPointLimit": 50
+      }
+    }
+  },
+  "padding": { "left": 10, "top": 15, "right": 10, "bottom": 2 },
+  "background": "#111827",
+  "width": "container",
+  "height": "container",
+  "autosize": { "type": "fit", "contains": "padding" },
+
+  "config": {
+    "font": "Segoe UI, sans-serif",
+    "tooltip": {
+      "theme": "dark",
+      "fontSize": 12,
+      "padding": 10
+    },
+    "scale": { "bandPaddingInner": 0.05 },
+    "axis": {
+      "labelColor": "#9CA3AF",
+      "titleColor": "#9CA3AF",
+      "gridColor": "#9CA3AF",
+      "gridOpacity": 0.08,
+      "domainColor": "#9CA3AF",
+      "tickColor": "#9CA3AF",
+      "labelFontSize": 11,
+      "titleFontSize": 12,
+      "titlePadding": 10
+    },
+    "view": { "stroke": "transparent" },
+    "title": {
+      "color": "#ffffff",
+      "fontSize": 16,
+      "fontWeight": "bold",
+      "anchor": "start",
+      "offset": 10
+    }
+  },
+
+  "title": "Cumulative Points by Round (Constructors)",
+  "data": { "name": "dataset" },
+
+  "transform": [
+    {
+      "calculate": "toNumber(datum['round'])",
+      "as": "round_num"
+    },
+    {
+      "joinaggregate": [
+        { "op": "max", "field": "cumulative_points", "as": "global_max" }
+      ]
+    },
+    {
+      "joinaggregate": [
+        { "op": "max", "field": "round_num", "as": "max_round_num" }
+      ]
+    },
+    {
+      "calculate": "datum.round_num == datum.max_round_num ? datum['rank_position'] : null",
+      "as": "rank_at_latest"
+    },
+    {
+      "joinaggregate": [
+        { "op": "min", "field": "rank_at_latest", "as": "current_rank" }
+      ],
+      "groupby": ["constructor_id"]
+    },
+    {
+      "calculate": "datum.current_rank <= 7 ? 2.25 : 1",
+      "as": "line_width"
+    },
+    {
+      "calculate": "datum.current_rank <= 7 ? 0.95 : 0.3",
+      "as": "line_opacity"
+    },
+    {
+      "calculate": "datum.current_rank <= 7 ? 16 : 6",
+      "as": "pt_size"
+    },
+    {
+      "calculate": "'Season: ' + datum['season'] + '   ●   Round: ' + datum['round']",
+      "as": "tt_row1"
+    },
+    {
+      "calculate": "'Race: ' + datum['short_race_name']",
+      "as": "tt_row2"
+    },
+    {
+      "calculate": "'Circuit: ' + datum['circuit_name']",
+      "as": "tt_row3"
+    },
+    {
+      "calculate": "'Constructor: ' + datum['constructor_name'] + '   ●   Points: ' + datum['round_points']",
+      "as": "tt_row4"
+    },
+    {
+      "calculate": "'Total Points: ' + datum['cumulative_points'] + '   ●   Rank: ' + datum['rank_position']",
+      "as": "tt_row5"
+    }
+  ],
+
+  "layer": [
+    {
+      "mark": {
+        "type": "rule",
+        "strokeDash": [6, 4],
+        "strokeWidth": 1,
+        "color": "#ffffff",
+        "opacity": 0.3,
+        "clip": false
+      },
+      "encoding": {
+        "y": {
+          "field": "global_max",
+          "type": "quantitative",
+          "aggregate": "max"
+        }
+      }
+    },
+
+    {
+      "transform": [
+        {
+          "aggregate": [
+            { "op": "max", "field": "global_max", "as": "gmax" }
+          ]
+        }
+      ],
+      "mark": {
+        "type": "text",
+        "align": "left",
+        "baseline": "bottom",
+        "dx": 4,
+        "dy": -4,
+        "fontSize": 11,
+        "fontWeight": "bold",
+        "color": "#aaaaaa",
+        "clip": false
+      },
+      "encoding": {
+        "x": { "value": 0 },
+        "y": { "field": "gmax", "type": "quantitative" },
+        "text": {
+          "field": "gmax",
+          "type": "quantitative",
+          "format": ".0f"
+        }
+      }
+    },
+
+    {
+      "transform": [
+        {
+          "aggregate": [
+            { "op": "max", "field": "global_max", "as": "gmax" }
+          ]
+        }
+      ],
+      "mark": {
+        "type": "text",
+        "align": "left",
+        "baseline": "top",
+        "dx": 4,
+        "dy": 2,
+        "fontSize": 10,
+        "color": "#888888",
+        "fontStyle": "italic",
+        "clip": false
+      },
+      "encoding": {
+        "x": { "value": 0 },
+        "y": { "field": "gmax", "type": "quantitative" },
+        "text": { "value": "(maximum Points)" }
+      }
+    },
+
+    {
+      "mark": {
+        "type": "line",
+        "interpolate": "linear",
+        "clip": true
+      },
+      "encoding": {
+        "x": {
+          "field": "round",
+          "type": "ordinal",
+          "sort": { "field": "round_num", "op": "min" },
+          "axis": {
+            "title": "Round",
+            "labelAngle": 0,
+            "labelOverlap": false
+          }
+        },
+        "y": {
+          "field": "cumulative_points",
+          "type": "quantitative",
+          "axis": {
+            "title": "Cumulative Points",
+            "gridDash": [3, 3]
+          }
+        },
+        "color": {
+          "field": "color_code",
+          "type": "nominal",
+          "scale": null,
+          "legend": null
+        },
+        "detail": { "field": "constructor_id", "type": "nominal" },
+        "strokeWidth": {
+          "field": "line_width",
+          "type": "quantitative",
+          "scale": null
+        },
+        "opacity": {
+          "field": "line_opacity",
+          "type": "quantitative",
+          "scale": null
+        },
+        "tooltip": [
+          { "field": "season",            "title": "Season",       "type": "nominal" },
+          { "field": "round",             "title": "Round",        "type": "ordinal" },
+          { "field": "short_race_name",   "title": "Race",         "type": "nominal" },
+          { "field": "circuit_name",      "title": "Circuit",      "type": "nominal" },
+          { "field": "constructor_name",  "title": "Constructor",  "type": "nominal" },
+          { "field": "round_points",      "title": "Points",       "type": "quantitative" },
+          { "field": "cumulative_points", "title": "Total Points", "type": "quantitative" },
+          { "field": "rank_position",  "title": "Rank",         "type": "quantitative" }
+        ]
+      }
+    },
+
+    {
+      "mark": { "type": "point", "filled": true, "clip": true },
+      "encoding": {
+        "x": {
+          "field": "round",
+          "type": "ordinal",
+          "sort": { "field": "round_num", "op": "min" }
+        },
+        "y": { "field": "cumulative_points", "type": "quantitative" },
+        "color": {
+          "field": "color_code",
+          "type": "nominal",
+          "scale": null,
+          "legend": null
+        },
+        "detail": { "field": "constructor_id" },
+        "size": {
+          "field": "pt_size",
+          "type": "quantitative",
+          "scale": null
+        },
+        "opacity": {
+          "field": "line_opacity",
+          "type": "quantitative",
+          "scale": null
+        },
+        "tooltip": [
+          { "field": "season",            "title": "Season",       "type": "nominal" },
+          { "field": "round",             "title": "Round",        "type": "ordinal" },
+          { "field": "short_race_name",   "title": "Race",         "type": "nominal" },
+          { "field": "circuit_name",      "title": "Circuit",      "type": "nominal" },
+          { "field": "constructor_name",  "title": "Constructor",  "type": "nominal" },
+          { "field": "round_points",      "title": "Points",       "type": "quantitative" },
+          { "field": "cumulative_points", "title": "Total Points", "type": "quantitative" },
+          { "field": "rank_position",  "title": "Rank",         "type": "quantitative" }
+        ]
+      }
+    },
+
+    {
+      "transform": [
+        {
+          "joinaggregate": [
+            { "op": "max", "field": "round_num", "as": "max_round" }
+          ]
+        },
+        { "filter": "datum.round_num == datum.max_round" }
+      ],
+      "mark": {
+        "type": "text",
+        "align": "left",
+        "baseline": "middle",
+        "dx": 8,
+        "fontSize": 11,
+        "fontWeight": "bold",
+        "clip": false
+      },
+      "encoding": {
+        "x": {
+          "field": "round",
+          "type": "ordinal",
+          "sort": { "field": "round_num", "op": "min" }
+        },
+        "y": { "field": "cumulative_points", "type": "quantitative" },
+        "text": { "field": "constructor_name", "type": "nominal" },
+        "color": {
+          "field": "color_code",
+          "type": "nominal",
+          "scale": null,
+          "legend": null
+        },
+        "opacity": {
+          "field": "line_opacity",
+          "type": "quantitative",
+          "scale": null
+        }
+      }
+    }
+  ]
+}

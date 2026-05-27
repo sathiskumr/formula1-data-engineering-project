@@ -6,6 +6,4 @@ SELECT
 FROM 
     formula1_incr.gold.fact_session_results
 WHERE 
-    season >= 2010
- ORDER BY 
-    season;
+    season >= 2020;
