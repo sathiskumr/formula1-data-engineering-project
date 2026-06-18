@@ -26,7 +26,7 @@ Formula 1 race data is sourced from the Jolpica F1 API and processed as incremen
 
 - **Incremental by design** — each race weekend is an isolated batch. Already-processed rounds are never reprocessed, making the pipeline idempotent and cost-efficient.
 - **Medallion architecture** — raw data is preserved in Bronze, cleaned and standardised in Silver, and modelled into an analytics-ready star schema in Gold.
-- **Data quality as a first-class concern** — 7 check types (null, uniqueness, row count, value range, non-negative, allowed values, referential integrity) run on every Silver table per batch. Results are persisted to an audit table and critical failures halt the pipeline.
+- **Data quality as a first-class concern** — 6 check types (null, uniqueness, row count, value range, non-negative, referential integrity) run on every Silver table per batch. Results are persisted to an audit table and critical failures halt the pipeline.
 - **Operational maturity** — automated weekly scheduling, email alerts on start/success/failure/duration, and a batch control table that tracks every run end-to-end.
 
 ### 📡 Data Source
@@ -49,7 +49,7 @@ The pipeline ingests Formula 1 race data from the Jolpica F1 API (https://api.jo
 | **Catalog & Governance** | Unity Catalog (`formula1_incr`) | Governance, metadata, lineage |
 | **Orchestration** | Databricks Lakeflow Jobs | DAG-based pipeline scheduling + alerting |
 | **Transformation** | PySpark + Databricks Notebooks | Bronze ingestion, Silver cleaning, Gold modelling |
-| **Data Quality** | Custom DQ Framework (PySpark) | 7 check types, audit table, critical-failure halting |
+| **Data Quality** | Custom DQ Framework (PySpark) | 6 check types, audit table, critical-failure halting |
 | **Analytics Layer** | Spark SQL Views | Standings, evolution, stats, reference data |
 | **BI & Reporting** | Power BI Desktop + Deneb | Dashboard with native and custom Deneb visuals |
 
@@ -146,7 +146,6 @@ A custom DQ framework runs on every Silver table after each transformation. Resu
 | `min_rows` | Batch has a minimum expected row count (catches empty/truncated files) |
 | `value_range` | Numeric columns (e.g. `points`, `grid_position`) fall within expected bounds |
 | `not_negative` | Columns that must be ≥ 0 (e.g. `completed_laps`, `points`) |
-| `allowed_values` | Categorical columns (e.g. `session_type`) contain only valid values |
 | `referential` | Foreign keys resolve against their parent dimension table |
 
 ### Severity Model

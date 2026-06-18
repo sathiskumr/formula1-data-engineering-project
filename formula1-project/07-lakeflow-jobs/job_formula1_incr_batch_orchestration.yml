@@ -11,12 +11,12 @@ resources:
           - skr03@outlook.com
         on_duration_warning_threshold_exceeded:
           - skr03@outlook.com
-      timeout_seconds: 1500
+      timeout_seconds: 2400
       health:
         rules:
           - metric: RUN_DURATION_SECONDS
             op: GREATER_THAN
-            value: 1200
+            value: 1800
       schedule:
         quartz_cron_expression: 51 0 7 ? * Mon
         timezone_id: Asia/Calcutta
@@ -129,8 +129,8 @@ resources:
           depends_on:
             - task_key: 03_transform_constructors_data
           notebook_task:
-            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/04-gold/02.
-              Build Constructors Dimension
+            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/04-gold/02.Build
+              Constructors Dimension
             base_parameters:
               p_batch_id: "{{tasks.01_Identify_Next_Batch.values.p_batch_id}}"
             source: WORKSPACE
@@ -227,6 +227,27 @@ resources:
               Batch
             base_parameters:
               p_batch_id: "{{tasks.01_Identify_Next_Batch.values.p_batch_id}}"
+            source: WORKSPACE
+          job_cluster_key: batch_orchestration
+        - task_key: 04_semantic_model_refresh
+          depends_on:
+            - task_key: 03_Complete_Batch
+          power_bi_task:
+            warehouse_id: ca3a53d9200b90e8
+            power_bi_model:
+              workspace_name: f1project_prod
+              model_name: dashboard - FE incr
+              storage_mode: DIRECT_QUERY
+              authentication_method: OAUTH
+              overwrite_existing: false
+            connection_resource_name: pbi_refresh
+            refresh_after_update: true
+        - task_key: 05_Export_to_PDF
+          depends_on:
+            - task_key: 04_semantic_model_refresh
+          notebook_task:
+            notebook_path: /Workspace/Users/skr03@outlook.com/formula1-data-engineering-project/formula1-project/05-orchestration/05.Export
+              to PDF
             source: WORKSPACE
           job_cluster_key: batch_orchestration
       job_clusters:
