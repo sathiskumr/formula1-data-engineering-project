@@ -1,17 +1,53 @@
 import requests
 import math
-
+from datetime import date
+ 
 BASE_URL = "https://api.jolpi.ca/ergast/f1"
+MIN_SEASON = 1950       # First F1 World Championship season
+MAX_ROUND  = 30         # Generous upper bound — no F1 season has exceeded 24 races
 
 
 def validate_batch_inputs(season: str, round_no: str) -> str:
     """
-    Validates that season and round_no are non-empty and returns the batch_id.
-    This is the same guard that lives at the top of the notebook, extracted
-    so it can be tested independently.
+    Validates season and round_no and returns the zero-padded batch_id.
+
+    Performs cheap, static sanity checks on the manual-override path:
+      - both values provided and numeric
+      - season between MIN_SEASON (1950) and the current year
+      - round_no between 1 and MAX_ROUND (30)
+
+    These catch obvious typos (e.g. season=1800, round_no=99) instantly,
+    without an API call. They do NOT guarantee the (season, round) pair
+    corresponds to a race that has actually happened — a season/round
+    that passes these checks but doesn't exist (e.g. round 20 of a
+    20-race season that's still ongoing) is caught downstream when
+    parse_results raises "No results found" on an empty API response.
     """
     if not season or not round_no:
         raise ValueError("Both p_season and p_round_no must be provided.")
+
+    try:
+        season_int = int(season)
+    except ValueError:
+        raise ValueError(f"p_season must be numeric, got '{season}'.")
+
+    try:
+        round_int = int(round_no)
+    except ValueError:
+        raise ValueError(f"p_round_no must be numeric, got '{round_no}'.")
+
+    current_year = date.today().year
+    if not (MIN_SEASON <= season_int <= current_year):
+        raise ValueError(
+            f"p_season={season_int} is out of range. "
+            f"Must be between {MIN_SEASON} (first F1 season) and {current_year} (current year)."
+        )
+
+    if not (1 <= round_int <= MAX_ROUND):
+        raise ValueError(
+            f"p_round_no={round_int} is out of range. Must be between 1 and {MAX_ROUND}."
+        )
+
     return f"{season}-{round_no.zfill(2)}"
 
 
