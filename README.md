@@ -52,6 +52,8 @@ The pipeline ingests Formula 1 race data from the Jolpica F1 API (https://api.jo
 | **Data Quality** | Custom DQ Framework (PySpark) | 6 check types, audit table, critical-failure halting |
 | **Analytics Layer** | Spark SQL Views | Standings, evolution, stats, reference data |
 | **BI & Reporting** | Power BI Desktop + Deneb | Dashboard with native and custom Deneb visuals |
+| **Ingestion** | Python (`ingestion_helpers.py`) | Jolpica API fetching, pagination, parsing, input validation |
+| **Testing & CI** | pytest + GitHub Actions | Unit tests for ingestion helpers; runs on every PR and push to `main` |
 
 
 ---
@@ -67,6 +69,7 @@ The pipeline ingests Formula 1 race data from the Jolpica F1 API (https://api.jo
  ┃ ┣ 📁 03-silver/               # Transformation notebooks: type enforcement, deduplication, upsert
  ┃ ┣ 📁 04-gold/                 # Dimensional model: dim_races, dim_constructors, dim_drivers, fact_session_results
  ┃ ┣ 📁 05-orchestration/        # Batch control: identify → create → complete batch
+ ┃ ┣ 📁 06-ingestion-pipeline/   # API ingestion: notebook, helper module, unit tests
  ┃ ┣ 📁 07-lakeflow-jobs/        # Databricks job YAML (DAG definition + weekly schedule)
  ┃ ┣ 📁 08-analytics/            # SQL views: standings, evolution, stats, reference
  ┃ ┗ 📁 09-Reporting-BI/         # Native Visuals and Deneb JSON specs for Power BI custom visuals
@@ -76,6 +79,35 @@ The pipeline ingests Formula 1 race data from the Jolpica F1 API (https://api.jo
  ┃ ┗ 📁 helpers-svg/             # Custom SVG icons (F1 logo, calendar, helmet, race car)
  ┗ 📄 README.md
 ```
+
+---
+
+## 🔄 Ingestion Pipeline
+
+The `06-ingestion-pipeline/` folder handles everything between the Jolpica API and the ADLS Gen2 landing zone. It runs as `00_Ingestion_Pipeline` — the first task in the Lakeflow job, before any batch tracking begins.
+
+### Dual-Mode Operation
+
+| Mode | Trigger | Behaviour |
+|---|---|---|
+| **Auto-detect** | Both `p_season` and `p_round_no` left blank | Fetches the current season's race schedule, finds the most recently completed race within a 6-day look-back window, and derives the `batch_id` automatically |
+| **Manual override** | Both `p_season` and `p_round_no` provided | Skips auto-detect; useful for historical backfills. Both must be supplied together — a partial override raises immediately rather than silently falling back |
+
+### `ingestion_helpers.py`
+
+A standalone Python module (importable outside Databricks) with five functions:
+
+| Function | Purpose |
+|---|---|
+| `validate_batch_inputs(season, round_no)` | Validates season (1950–current year) and round (1–30); returns zero-padded `batch_id` |
+| `fetch_paginated(endpoint, data_key, record_key)` | Handles Jolpica's paginated responses; fetches all pages and returns a flat list |
+| `parse_results(races)` | Flattens race results into records; raises `ValueError` if the round hasn't completed yet |
+| `parse_sprints(races)` | Flattens sprint results; returns `[]` silently for non-sprint rounds |
+| `parse_drivers(drivers_raw)` | Parses driver records; converts empty `dateOfBirth` to `None` to avoid Bronze schema failures |
+
+**Key design note:** `parse_sprints` returning an empty list (not raising) for non-sprint rounds is intentional — an empty JSON file is written to landing, which the downstream Bronze and Silver notebooks handle gracefully, keeping the pipeline uniform across all race weekend types.
+
+Each batch run writes 6 files/directories to `landing/<batch_id>/`: `circuits`, `races`, `constructors`, `drivers`, `results`, and `sprints`.
 
 ---
 
@@ -121,11 +153,14 @@ The pipeline is orchestrated as a **Databricks Lakeflow Job** running on a weekl
 
 The DAG enforces a strict dependency order:
 
-1. **`01_Identify_Next_Batch`** — queries the batch control table to find the next unprocessed batch. If none exists, a conditional branch (`is_There_A_Batch_To_Process`) short-circuits the run cleanly rather than failing.
-2. **`02_Create_New_Batch`** — registers the batch as in-progress in the control table, establishing a single audit record for the run.
-3. **Bronze + Silver tasks (parallel)** — 6 Bronze ingestion tasks fan out in parallel, each feeding its corresponding Silver transformation task. This parallelism cuts wall-clock time significantly vs sequential execution.
-4. **Gold dimension + fact tasks** — The Gold layer is built from Silver data, producing dimension and fact tables for analytical consumption.
-5. **`03_Complete_Batch`** — marks the batch as successfully processed in the control table. Only reached if all upstream tasks succeed.
+1. **`00_Ingestion_Pipeline`** — calls the Jolpica F1 API and writes raw files to ADLS Gen2 under the batch's landing path. Supports auto-detect (6-day look-back window from today) and manual override via `p_season`/`p_round_no` widgets for historical backfills.
+2. **`01_Identify_Next_Batch`** — queries the batch control table to find the earliest unprocessed landing folder. If none exists, a conditional branch (`is_There_A_Batch_To_Process`) short-circuits the run cleanly rather than failing.
+3. **`02_Create_New_Batch`** — registers the batch as `in_progress` in the control table, establishing a single audit record for the run.
+4. **Bronze + Silver tasks (parallel)** — 6 Bronze ingestion tasks fan out in parallel, each feeding its corresponding Silver transformation task. This parallelism cuts wall-clock time significantly vs sequential execution.
+5. **Gold dimension + fact tasks** — Three dimension tables and one fact table are built from Silver data. `fact_session_results` waits on both results and sprints Silver tasks before running.
+6. **`03_Complete_Batch`** — marks the batch as `completed` in the control table via a Delta `MERGE`. Only reached if all upstream tasks succeed.
+7. **`04_semantic_model_refresh`** — triggers a refresh of the Power BI Direct Query semantic model (`dashboard - FE incr` in the `f1project_prod` workspace) using a dedicated Lakeflow Power BI task (not a notebook).
+8. **`05_Export_to_PDF`** — calls the Power BI REST API to export the dashboard as a PDF snapshot, polls for completion, and saves the file to a Unity Catalog Volume (`formula1_incr/reports/snapshots/<season>_<round>_<timestamp>.pdf`). Credentials are pulled from a Databricks Secret Scope (`pbi-secrets`).
 
 <img src="assets/screenshots/job_formula1_incr_batch_orchestration.png" alt="Databricks Lakeflow Job DAG" width="100%"/>
 
@@ -156,6 +191,28 @@ A custom DQ framework runs on every Silver table after each transformation. Resu
 ### Delta CHECK Constraints
 
 In addition to runtime DQ checks, Delta-level `CHECK` constraints are applied to Silver tables at setup time, enforcing invariants at the storage layer — a second line of defence independent of the pipeline code.
+
+---
+
+## 🧪 Testing & CI
+
+`ingestion_helpers.py` has a full pytest suite (`test_ingestion_helpers.py`) covering all five functions. Tests never make real HTTP calls — `requests.get` is replaced with `unittest.mock.patch` so the suite is fast, deterministic, and network-independent.
+
+| Test Class | What's covered |
+|---|---|
+| `TestValidateBatchInputs` | Empty inputs, non-numeric, out-of-range season/round, correct zero-padding |
+| `TestFetchPaginated` | Single-page response, multi-page pagination (correct offset), HTTP error propagation |
+| `TestParseResults` | Empty races raises `ValueError`; correct int/float casting; raceName lowercasing |
+| `TestParseSprints` | Empty races returns `[]` (not an error); correct typing for sprint records |
+| `TestParseDrivers` | Empty-string `dateOfBirth` → `None`; missing key → `None`; name lowercasing regression |
+
+A GitHub Actions workflow (`.github/workflows/unit-tests.yml`) runs the full suite on every **pull request** and **push to `main`**.
+
+```yaml
+# Trigger: PR + push to main
+working-directory: formula1-project/06-ingestion-pipeline
+run: pytest -v
+```
 
 ---
 
